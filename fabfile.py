@@ -129,3 +129,20 @@ def deploy(name, function='anno-docs-lambda-stage'):
     command += ' --function-name %s' % (function)
     logger.info('command: %s' % command)
     local(command)
+
+
+@task
+def sync_anno_docs_files():
+    files = ['templates/transcript/annotation.html',
+             'templates/transcript/other.html',
+             'templates/transcript/soundbite.html',
+             'templates/transcript/speaker.html',
+             'parse_doc.py']
+    src_root = 'https://raw.githubusercontent.com/nprapps/anno-docs/master'
+    dst_root = 'code'
+    for file in files:
+        local('curl -s %s/%s -o %s/%s' % (
+            src_root, file,
+            dst_root, file))
+    print('Latest files downloaded. Now, git add and commit the new changes.')
+    local('git status')
