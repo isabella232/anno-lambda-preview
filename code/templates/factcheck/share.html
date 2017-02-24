@@ -1,0 +1,192 @@
+{% set filtered_contents = contents|selectattr("published", "equalto", "yes")|selectattr("type", "equalto", "annotation") %}
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title></title>
+        <link rel="stylesheet" href="css/rendered/app.min.css">
+        <link rel="shortcut icon" href="https://media.npr.org/favicon.ico" />
+        <style>
+            body{
+                padding: 40px;
+            }
+
+            .shareLink{
+                margin-top: 2em;
+            }
+
+            .annotation{
+                margin-bottom: .5em;
+            }
+
+            .outerCheck{
+                margin-bottom: 2em;
+            }
+
+            #output {
+                margin-top: 30px;
+            }
+
+            #input {
+                font-size: 18px;
+            }
+
+            .input-item {
+                display: block;
+            }
+
+            .input-item {
+                font-size: 16px;
+            }
+
+            input.input-item {
+                font-size: 14px;
+            }
+
+            .required-flag {
+                color: red;
+            }
+
+            #error {
+                margin-top: 15px;
+                color: red;
+            }
+
+            p {
+                margin-bottom: .5em;
+            }
+
+            input {
+                width: 80%;
+                margin-bottom: 5px;
+            }
+        </style>
+    </head>
+  <body>
+        <div id="input">
+            <label class="bold input-item" for="url">Enter the factcheck url<span class="required-flag">*</span></label>
+            <input class="input-item" placeholder="http://www.npr.org/2017/01/31/512439121/trumps-executive-order-on-immigration-annotated" type="text" name="url" id="url">
+            <label class="input-item" for="campaigns">Enter optional twitter campaigns</label>
+            <input class="input-item" placeholder="npr,politics" type="text" name="campaigns" id="campaigns">
+            <button class="input-item" id="submit" type="button">Generate sharing page</button>
+        </div>
+        <div id="output">
+        {% for content in filtered_contents %}
+            <div class="outerCheck">{{content.markup|safe}}</div>
+        {% endfor %}
+        </div>
+        <script src="js/lib/jquery.js"></script>
+        <script type="text/javascript">
+            var theId = null;
+            var div = null;
+            function createShareLinks(url, campaignsRaw){
+                campaigns = [];
+                // Parse campaigns
+                if (campaignsRaw) {
+                    campaigns = campaignsRaw.split(',');
+                }
+                // Add NPR specific campaign params
+                if (url.indexOf('npr.org/') !== -1) {
+                    npr_share = '&utm_term=nprnews&utm_content=202604';
+                }
+                else {
+                    npr_share = '';
+                }
+
+                allDivs = document.getElementsByClassName('outerCheck')
+                allChecks = document.getElementsByClassName('annotation');
+                for (var i = 0; i < allChecks.length; i++){
+                    div = allDivs[i];
+                    thisCheck = allChecks[i];
+                    theId = thisCheck.getAttribute('id');
+                    theURL = url + '#' + theId;
+
+                    var p = document.createElement('p');
+                    p.setAttribute('class', 'shareLink share-assets');
+                    var checkLink = document.createElement('a');
+                    checkLink.setAttribute('href', theURL);
+                    checkLink.setAttribute('target', "_blank");
+                    checkLink.innerHTML = theURL;
+                    p.appendChild(checkLink);
+                    div.appendChild(p);
+
+                    for (var j=0; j < campaigns.length; j++) {
+                        theURL = url + '&utm_source=twitter.com&utm_medium=social' + npr_share + '&utm_campaign=' + campaigns[j].trim() + '#' + theId;
+                        var p = document.createElement('p');
+                        p.setAttribute('class', 'share-assets');
+                        var span = document.createElement('span');
+                        span.innerHTML = campaigns[j].trim().toUpperCase() + " Twitter: ";
+                        p.appendChild(span);
+                        var input = document.createElement('input');
+                        input.setAttribute('type', 'text');
+                        input.setAttribute('value', theURL);
+                        p.appendChild(input);
+                        div.appendChild(p);
+                    }
+                }
+                $('#output').show();
+            };
+
+            function showError(msg, element) {
+                $('#error').remove();
+                var div = $('<div id="error" class="error">' + msg + '</div>');
+                $(element).after(div);
+            };
+
+            function validate() {
+                if (!$('#url').val() || (!/^https?:\/\//i.test($('#url').val()))) {
+                    showError("A valid url is needed", $('#input'));
+                    $('#output').hide();
+                    return;
+                }
+                $('#error').remove();
+                $('.share-assets').remove()
+                var url = $('#url').val();
+                var campaigns = $('#campaigns').val();
+                if (!campaigns) {
+                    campaigns = null
+                }
+                // Store data on localStorage
+                if (storageAvailable('localStorage')) {
+                    localStorage.setItem("share-url", url);
+                    if (campaigns) {
+                        localStorage.setItem("share-campaigns", campaigns);
+                    } else {
+                        localStorage.removeItem("share-campaigns");
+                    }
+                }
+                createShareLinks(url, campaigns);
+            };
+
+            function storageAvailable(type) {
+                try {
+                    var storage = window[type],
+                        x = '__storage_test__';
+                    storage.setItem(x, x);
+                    storage.removeItem(x);
+                    return true;
+                }
+                catch(e) {
+                    return false;
+                }
+            }
+
+            $(function() {
+                $('#output').hide();
+                $('#submit').click(validate);
+                // Get data from localStorage
+                if (storageAvailable('localStorage')) {
+                    var campaigns = localStorage.getItem("share-campaigns");
+                    if (campaigns) {
+                        $("#campaigns").val(campaigns);
+                    }
+                    var url = localStorage.getItem("share-url");
+                    if (url) {
+                        $("#url").val(url);
+                        createShareLinks(url, campaigns);
+                    }
+                }
+            });
+        </script>
+    </body>
+</html>

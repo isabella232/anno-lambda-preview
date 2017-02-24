@@ -1,0 +1,25 @@
+{%if preview %}
+    {% set filtered_contents = contents %}
+{% else %}
+    {% set filtered_contents = contents|selectattr("published", "equalto", "yes") %}
+{% endif %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+</head>
+<body>
+    <div class="transcript {{status}}">
+{%if preview %}
+    <h2 class="preview-msg">Preview page to check draft annotations</h2>
+{% endif %}
+    <div class="error-message">
+        <p>Due to technical issues, the fact check is not updating. We are actively working on a fix.</p>
+    </div>
+{% for content in filtered_contents %}
+    {{ content.markup|safe }}
+{% endfor %}
+    </div>
+</body>
+</html>
