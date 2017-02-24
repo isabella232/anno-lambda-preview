@@ -50,14 +50,26 @@ pip install -r requirements.txt
 Run the project
 ---------------
 
-Review the code for your lambda function, include all the required libraries in `code/requirements.txt`
+* Review the code for your lambda function, include all the required libraries in `code/requirements.txt`
 
-Create a function in your AWS lambda environment.
+Since some of the code on this repo should be identical to that of the origin [anno-docs repo](https://github.com/nprapps/anno-docs) there's a fabric task that will grab the latest pushed files from `master` and place them in their corresponding place in the `code` folder. To sync those files run manually:
 
-Then run:
+```
+fab sync_anno_docs_files
+```
+
+* Create a function in your AWS lambda environment.
+
+* Finally run:
 
 ```
 fab deploy:code,function=FUNCTION_NAME
 ```
 
 Where `FUNCTION_NAME` is the name of the created lambda function
+
+_The deploy function automatically invokes the sync task mentioned above._
+
+
+
+

@@ -92,6 +92,9 @@ def render(name):
     - Compress libraries
     - Add code files
     """
+    # Sync the code from anno-docs
+    execute(sync_anno_docs_files, 1)
+
     BASE_PATH = os.path.join(cwd, name)
     OUTPUT_PATH = os.path.join(cwd, 'zip')
     # Create output files folder if needed
@@ -132,7 +135,7 @@ def deploy(name, function='anno-docs-lambda-stage'):
 
 
 @task
-def sync_anno_docs_files():
+def sync_anno_docs_files(quiet=None):
     files = ['templates/transcript/annotation.html',
              'templates/transcript/other.html',
              'templates/transcript/soundbite.html',
@@ -144,5 +147,7 @@ def sync_anno_docs_files():
         local('curl -s %s/%s -o %s/%s' % (
             src_root, file,
             dst_root, file))
-    print('Latest files downloaded. Now, git add and commit the new changes.')
-    local('git status')
+
+    if quiet:
+        logger.info('Latest files downloaded. Now, git add & commit.')
+        local('git status')
