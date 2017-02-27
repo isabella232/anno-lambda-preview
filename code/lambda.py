@@ -69,46 +69,53 @@ def lambda_handler(event, context):
     - parses the factcheck document and publishes to staging
     """
     try:
+        logger.info('Start preview generation')
         TRANSCRIPT_GDOC_KEY = event['doc_key']
         AUTHORS_GOOGLE_DOC_KEY = event['authors_key']
     except KeyError:
         logger.error("Could not retrieve data from incoming request %s" % (
             event))
         return
+    try:
+        authors_url = app_config.SPREADSHEET_URL_TEMPLATE % (
+            AUTHORS_GOOGLE_DOC_KEY)
+        doc_url = app_config.DOC_URL_TEMPLATE % (
+            TRANSCRIPT_GDOC_KEY)
 
-    authors_url = app_config.SPREADSHEET_URL_TEMPLATE % (
-        AUTHORS_GOOGLE_DOC_KEY)
-    doc_url = app_config.DOC_URL_TEMPLATE % (
-        TRANSCRIPT_GDOC_KEY)
+        # Get the credentials and refresh if necesary
+        credentials = app_config.authomatic.credentials(app_config.GOOGLE_CREDS)
+        if not credentials.valid:
+            credentials.refresh()
 
-    # Get the credentials and refresh if necesary
-    credentials = app_config.authomatic.credentials(app_config.GOOGLE_CREDS)
-    if not credentials.valid:
-        credentials.refresh()
+        # Get authors
+        response = app_config.authomatic.access(credentials, authors_url)
+        if response.status != 200:
+            logger.error("Error while accessing %s. HTTP: %s" % (
+                authors_url, response.status))
+            return
+        authors_data = response.content
+        authors = transform_authors(authors_data)
+        # Get doccument
+        response = app_config.authomatic.access(credentials, doc_url)
+        if response.status != 200:
+            logger.error("Error while accessing %s. HTTP: %s" % (
+                doc_url, response.status))
+            return
+        html = response.content
 
-    # Get authors
-    response = app_config.authomatic.access(credentials, authors_url)
-    if response.status != 200:
-        logger.error("Error while accessing %s. HTTP: %s" % (
-            authors_url, response.status))
-        return
-    authors_data = response.content
-    authors = transform_authors(authors_data)
-    # Get doccument
-    response = app_config.authomatic.access(credentials, doc_url)
-    if response.status != 200:
-        logger.error("Error while accessing %s. HTTP: %s" % (
-            doc_url, response.status))
-        return
-    html = response.content
+        # Parse data
+        doc = CopyDoc(html)
+        logger.info('Parsed doc html with copydoc')
+        context = parse_doc.parse(doc, authors)
+        logger.info('Parsed factcheck')
 
-    # Parse data
-    doc = CopyDoc(html)
-    context = parse_doc.parse(doc, authors)
-
-    # Generate final files and upload to S3
-    upload_template_contents(context, 'factcheck.html')
-    upload_template_contents(context, 'share.html')
-    context['preview'] = True
-    upload_template_contents(context, 'factcheck.html',
-                             'factcheck_preview.html')
+        # Generate final files and upload to S3
+        upload_template_contents(context, 'factcheck.html')
+        upload_template_contents(context, 'share.html')
+        context['preview'] = True
+        upload_template_contents(context, 'factcheck.html',
+                                 'factcheck_preview.html')
+        logger.info('Generated factcheck templates. Execution successful')
+    except Exception, e:
+        logger.error('Failed execution of lambda function. reason: %s' % (e))
+        return False
