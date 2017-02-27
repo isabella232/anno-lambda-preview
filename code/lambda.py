@@ -16,6 +16,9 @@ bucket = s3.Bucket(app_config.BUCKET)
 
 logger = logging.getLogger()
 logger.setLevel(app_config.LOG_LEVEL)
+logging.getLogger('authomatic').setLevel(logging.WARNING)
+logging.getLogger('boto3').setLevel(logging.WARNING)
+logging.getLogger('botocore').setLevel(logging.WARNING)
 
 env = Environment(loader=FileSystemLoader('templates/factcheck'))
 

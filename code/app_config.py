@@ -25,7 +25,7 @@ DOC_URL_TEMPLATE = 'https://www.googleapis.com/drive/v3/files/%s/export?mimeType
 
 
 LOG_FORMAT = '%(levelname)s:%(name)s:%(asctime)s: %(message)s'
-LOG_LEVEL = logging.WARNING
+LOG_LEVEL = logging.INFO
 
 SPEAKERS = {
     'HILLARY CLINTON': 'speaker dem',
