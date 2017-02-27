@@ -52,7 +52,9 @@ def upload_template_contents(context, template, s3filename=None):
         gz.write(markup)
     # Reset buffer to beginning
     f.seek(0)
-    s3Key = '%s/%s' % (app_config.ANNO_PATH, s3filename)
+    s3Key = '%s%s/%s' % (app_config.FACTCHECKS_DIRECTORY_PREFIX,
+                         app_config.PREVIEW_FACTCHECK,
+                         s3filename)
     bucket.put_object(Key=s3Key,
                       Body=f.read(),
                       ContentType='text/html',
@@ -62,12 +64,22 @@ def upload_template_contents(context, template, s3filename=None):
 
 def lambda_handler(event, context):
     """
-    authomatic access to google docs
+    Retrieves drive keys from the request payload
+    - connects to google using authomatic and OAuth2 credentials
+    - parses the factcheck document and publishes to staging
     """
+    try:
+        TRANSCRIPT_GDOC_KEY = event['doc_key']
+        AUTHORS_GOOGLE_DOC_KEY = event['authors_key']
+    except KeyError:
+        logger.error("Could not retrieve data from incoming request %s" % (
+            event))
+        return
+
     authors_url = app_config.SPREADSHEET_URL_TEMPLATE % (
-        app_config.AUTHORS_GOOGLE_DOC_KEY)
+        AUTHORS_GOOGLE_DOC_KEY)
     doc_url = app_config.DOC_URL_TEMPLATE % (
-        app_config.TRANSCRIPT_GDOC_KEY)
+        TRANSCRIPT_GDOC_KEY)
 
     # Get the credentials and refresh if necesary
     credentials = app_config.authomatic.credentials(app_config.GOOGLE_CREDS)

@@ -15,7 +15,8 @@ AUTHOMATIC_SALT = kms.decrypt(CiphertextBlob=b64decode(os.environ.get('AUTHOMATI
 GOOGLE_CREDS = kms.decrypt(CiphertextBlob=b64decode(os.environ.get('GOOGLE_CREDS')))['Plaintext']
 # env vars
 BUCKET = os.environ.get('BUCKET')
-ANNO_PATH = os.environ.get('ANNO_PATH')
+FACTCHECKS_DIRECTORY_PREFIX = 'factchecks/'
+PREVIEW_FACTCHECK = os.environ.get('PREVIEW_FACTCHECK')
 
 #Global vars
 DEFAULT_MAX_AGE = 20
@@ -32,10 +33,6 @@ SPEAKERS = {
     'DONALD TRUMP': 'speaker gop',
     'MIKE PENCE': 'speaker gop'
 }
-
-# Drive keys
-AUTHORS_GOOGLE_DOC_KEY = '1s0Vs4c41kp8mCvGnIFbdPK9YI9t18u0c2kvh6W1eZBw'
-TRANSCRIPT_GDOC_KEY = '19J7LB38ePACZnvs3PrFA0jcV_x1kRRgXlAIMPaS6zD4'
 
 authomatic_config = {
     'google': {

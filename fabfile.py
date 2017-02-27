@@ -125,7 +125,7 @@ def render(name):
 
 
 @task
-def deploy(name, function='anno-docs-lambda-stage'):
+def deploy(name, function='anno-docs-preview'):
     execute('render', name)
     command = 'aws lambda update-function-code'
     command += ' --zip-file=fileb://zip/%s.zip' % (name)
@@ -148,6 +148,6 @@ def sync_anno_docs_files(quiet=None):
             src_root, file,
             dst_root, file))
 
-    if quiet:
+    if not quiet:
         logger.info('Latest files downloaded. Now, git add & commit.')
         local('git status')
