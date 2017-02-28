@@ -53,4 +53,14 @@ authomatic_config = {
     },
 }
 
+
 authomatic = Authomatic(authomatic_config, AUTHOMATIC_SALT)
+
+
+# Exception Handling
+class UserException(Exception):
+    def __init__(self, value):
+        self.value = value
+
+    def __str__(self):
+        return str(self.value)

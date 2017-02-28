@@ -72,38 +72,42 @@ def lambda_handler(event, context):
     - parses the factcheck document and publishes to staging
     """
     try:
-        logger.info('Start preview generation')
-        TRANSCRIPT_GDOC_KEY = event['doc_key']
-        AUTHORS_GOOGLE_DOC_KEY = event['authors_key']
-    except KeyError:
-        logger.error("Could not retrieve data from incoming request %s" % (
-            event))
-        return
-    try:
+        try:
+            logger.info('Start preview generation')
+            TRANSCRIPT_GDOC_KEY = event['doc_key']
+            AUTHORS_GOOGLE_DOC_KEY = event['authors_key']
+        except KeyError:
+            msg = 'Did not find needed params in %s' % (event)
+            raise app_config.UserException('[BadRequest]: %s' % msg)
         authors_url = app_config.SPREADSHEET_URL_TEMPLATE % (
             AUTHORS_GOOGLE_DOC_KEY)
         doc_url = app_config.DOC_URL_TEMPLATE % (
             TRANSCRIPT_GDOC_KEY)
 
         # Get the credentials and refresh if necesary
-        credentials = app_config.authomatic.credentials(app_config.GOOGLE_CREDS)
+        credentials = app_config.authomatic.credentials(
+            app_config.GOOGLE_CREDS)
+        # Refresh credentials if needed
         if not credentials.valid:
             credentials.refresh()
 
         # Get authors
         response = app_config.authomatic.access(credentials, authors_url)
         if response.status != 200:
-            logger.error("Error while accessing %s. HTTP: %s" % (
-                authors_url, response.status))
-            return
+            msg = 'While accessing %s got HTTP: %s' % (authors_url,
+                                                       response.status)
+            raise app_config.UserException('[BadRequest]: %s' % msg)
         authors_data = response.content
         authors = transform_authors(authors_data)
+        if not authors:
+            msg = 'Could not parse authors spreadsheet' % (authors_url)
+            raise app_config.UserException('[BadRequest]: %s' % msg)
         # Get doccument
         response = app_config.authomatic.access(credentials, doc_url)
         if response.status != 200:
-            logger.error("Error while accessing %s. HTTP: %s" % (
-                doc_url, response.status))
-            return
+            msg = 'While accessing %s got HTTP: %s' % (doc_url,
+                                                       response.status)
+            raise app_config.UserException('[BadRequest]: %s' % msg)
         html = response.content
 
         # Parse data
@@ -119,6 +123,13 @@ def lambda_handler(event, context):
         upload_template_contents(context, 'factcheck.html',
                                  'factcheck_preview.html')
         logger.info('Generated factcheck templates. Execution successful')
+        return {'message': 'Preview generated successfully'}
+    except app_config.UserException, e:
+        logger.error('Exit with controlled exception %s' % e)
+        raise
     except Exception, e:
-        logger.error('Failed execution of lambda function. reason: %s' % (e))
-        return False
+        if isinstance(e, app_config.UserException):
+            raise
+        else:
+            logger.error('Failed lambda function. reason: %s' % (e))
+            raise Exception('[InternalServerError]: Unexpected Error')
