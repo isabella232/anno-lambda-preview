@@ -100,7 +100,7 @@ def lambda_handler(event, context):
         authors_data = response.content
         authors = transform_authors(authors_data)
         if not authors:
-            msg = 'Could not parse authors spreadsheet' % (authors_url)
+            msg = 'Could not parse authors spreadsheet %s' % (authors_url)
             raise app_config.UserException('[BadRequest]: %s' % msg)
         # Get doccument
         response = app_config.authomatic.access(credentials, doc_url)
