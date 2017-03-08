@@ -63,7 +63,7 @@ fab sync_anno_docs_files
 * Finally run:
 
 ```
-fab deploy:code,function=FUNCTION_NAME
+fab deploy:function=FUNCTION_NAME
 ```
 
 Where `FUNCTION_NAME` is the name of the created lambda function
