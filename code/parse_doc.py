@@ -15,7 +15,7 @@ logger.setLevel(app_config.LOG_LEVEL)
 # REGULAR EXPRESSIONS
 end_transcript_regex = re.compile(ur'.*LIVE\sTRANSCRIPT\sHAS\sENDED.*',
                                   re.UNICODE)
-do_not_write_regex = re.compile(ur'.*DO\s*NOT\s*WRITE\s*BELOW\s*THIS\s*LINE.*',
+do_not_write_regex = re.compile(ur'.*DO\s*NOT\s*WRITE\s*BELOW\s*THIS\s*LINE\s*([Ee][Rr]{2}[Oo][Rr])?.*',
                                 re.UNICODE)
 end_fact_check_regex = re.compile(ur'^\s*[Ee][Nn][Dd]\s*$',
                                   re.UNICODE)
@@ -31,11 +31,11 @@ frontmatter_marker_regex = re.compile(ur'^\s*-{3}\s*$',
 extract_metadata_regex = re.compile(ur'^(.*?):(.*)$',
                                     re.UNICODE)
 
-speaker_regex = re.compile(ur'^[A-Z\s.-]+(\s\[.*\])?:', re.UNICODE)
+speaker_regex = re.compile(ur'^[A-Z\s\.,-]+(\s\[.*\])?:', re.UNICODE)
 soundbite_regex = re.compile(ur'^\s*:', re.UNICODE)
 
 extract_speaker_metadata_regex = re.compile(
-    ur'^\s*(<.*?>)?([A-Z0-9\s.-]+)\s*(?:\[(.*)\]\s*)?:\s*(.*)', re.UNICODE)
+    ur'^\s*(<.*?>)?([A-Z0-9\s\.,-]+)\s*(?:\[(.*)\]\s*)?:\s*(.*)', re.UNICODE)
 extract_soundbite_metadata_regex = re.compile(
     ur'^\s*(?:<.*?>)?\s*:\[\((.*)\)\]', re.UNICODE)
 extract_author_metadata_regex = re.compile(
@@ -214,11 +214,12 @@ def process_transcript_content(tag):
     TODO
     """
     text = tag.get_text()
-    combined_contents = ''
-    for content in tag.contents:
-        combined_contents += unicode(content)
+    combined_contents = unicode(tag)
+    # for content in tag.contents:
+    #     combined_contents += unicode(content)
     if speaker_regex.match(text):
         typ = 'speaker'
+        logger.info(text)
         context = process_speaker_transcript(combined_contents)
     elif soundbite_regex.match(text):
         typ = 'soundbite'
@@ -289,15 +290,21 @@ def categorize_doc_content(doc):
     fact_check_status = None
     hr = doc.soup.hr
     if hr:
+        # Remove div elements after hr to solve issue #63
+        # Comments where there are links pasted in from another source
+        # got poured into the final document. since there's no way to create
+        # divs natively inside the google doc, we clear those out.
+        for comment in hr.find_all('div'):
+            comment.decompose()
         # If we see an h1 with that starts with END
         if hr.find("p", text=end_fact_check_regex):
             fact_check_status = 'after'
             # Get rid of everything after the Horizontal Rule
-            hr.extract()
+            hr.decompose()
         elif hr.find("p", text=end_transcript_regex):
             fact_check_status = 'transcript-end'
             # Get rid of everything after the Horizontal Rule
-            hr.extract()
+            hr.decompose()
         else:
             # Get rid of the marker but keep the last paragraph
             for child in hr.children:
@@ -307,7 +314,11 @@ def categorize_doc_content(doc):
                     after_hr_text = child.get_text()
                 m = do_not_write_regex.match(after_hr_text)
                 if m:
-                    child.extract()
+                    child.decompose()
+                    if m.group(1):
+                        # Force before and error status on transcript
+                        fact_check_status = 'error'
+                    break
             hr.unwrap()
 
     result = []
